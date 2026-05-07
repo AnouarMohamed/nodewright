@@ -160,7 +160,7 @@ Development
   watch-tests      watch unit tests and auto run on changes.
   unit-tests       Run unit tests.
   e2e-tests        Run end to end tests.
-  create-kind-cluster  deletes and creates a new kind cluster. versions is set via KIND_VERSION
+  create-kind-cluster  creates or updates a kind cluster. version is set via KIND_NODE_VERSION
   podman-create-machine  creates a podman machine
   lint             Run golangci-lint linter & yamllint
   lint-fix         Run golangci-lint linter and perform fixes
@@ -231,4 +231,3 @@ make uninstall
 This repo uses kubebuilder for scaffolding this project, and lots of functions in the makefile are hooked up to this as well. Kubebuilder for the most part manages the [config](./config) directory which uses kustomize heavily. To convert this structure into helm, we using a tool call helmify. Its a generic tool that converts this kubebuilder kustomize into a helm chart. It does not do everything, just a lot of it. So once you call `make generate-helm` you might need to make some additional changes or revert some of its changes. At some point we might want to stop using it if if becomes more work, but for now it does a pretty good job keep the two different ways of managing config in sync. 
 
 Common work flow looks like: change something that requires updating config. First do `make manifest` and `make generate`. This will alter the config based on comments let in code. Example would be in the CRD `//+kubebuilder:validation:Enum=service;reboot`. Changes to the CRD will require those 2 make functions( well depending what you change might need just one). Then to keep in sync do `make generate-helm` which ask `are you sure` this is because it might not do exactly what you think. To keep in sync you need to say Y, and edit the chart as needed or do it by hand. Depending on what you did. Might make sense to do this in a clean git state so you can see what its doing. Mostly making it sound scarier then it is, just be warned.
-

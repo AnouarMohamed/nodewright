@@ -152,12 +152,9 @@ jobs:
           sudo install /tmp/kind-linux-amd64 /usr/local/bin/kind
       - name: Create ctlptl KinD Cluster
         if: matrix.test-suite == 'helm-tests'
-        run: ./operator/bin/ctlptl apply -f operator/config/local-dev/ctlptl-config.yaml
-      - name: Set up ctlptl KinD Cluster
-        if: matrix.test-suite == 'helm-tests'
         run: |
           cd operator
-          make setup-kind-cluster
+          make create-kind-cluster K8S_TEST_VERSION=${{ matrix.k8s-version }}
       # Run test suite
       - name: Run ${{ matrix.test-suite }} tests
         run: |
