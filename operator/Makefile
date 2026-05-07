@@ -24,11 +24,9 @@ DISTROLESS_VERSION ?= 4.0.2
 ## TODO: update this to the correct image location
 IMG_REPO ?= ghcr.io/nvidia/skyhook
 IMG ?= $(IMG_REPO)/operator
-LOCAL_REGISTRY ?= localhost:5005
+# The helm Chainsaw assertions pin this local registry endpoint.
+LOCAL_REGISTRY = localhost:5005
 LOCAL_OPERATOR_IMG ?= $(LOCAL_REGISTRY)/skyhook-operator:testing
-
-## default Kubernetes version for kind-based development clusters
-KIND_VERSION ?= $(ENVTEST_K8S_VERSION)
 
 PLATFORM := $(shell uname -s 2>/dev/null || echo unknown)
 SKYHOOK_NAMESPACE ?= skyhook
@@ -248,8 +246,8 @@ rollout-local: push-local-image ## push locally-built operator and restart the d
 
 
 .PHONY: delete-kind-cluster
-delete-kind-cluster: ctlptl ## delete the local ctlptl kind cluster and registry
-	$(CTLPTL) delete -f config/local-dev/ctlptl-config.yaml
+delete-kind-cluster: ctlptl render-ctlptl-config ## delete the local ctlptl kind cluster and registry
+	$(CTLPTL) delete -f $(CTLPTL_RENDERED_CONFIG)
 
 operator-agent-tests: chainsaw install ## Run operator agent tests.
 	@if [ -z "$(AGENT_IMAGE)" ]; then \
@@ -287,7 +285,7 @@ create-deployment-policy-cluster: ## Create a 15-node Kind cluster for deploymen
 		fi; \
 	fi
 	kind delete cluster --name skyhook-dp-test 2>/dev/null || true
-	kind create cluster --name skyhook-dp-test --config ../k8s-tests/chainsaw/deployment-policy/kind-config.yaml --image=kindest/node:v$(KIND_VERSION)
+	kind create cluster --name skyhook-dp-test --config ../k8s-tests/chainsaw/deployment-policy/kind-config.yaml --image=kindest/node:v$(KIND_NODE_VERSION)
 
 .PHONY: delete-deployment-policy-cluster
 delete-deployment-policy-cluster: ## Delete the 15-node Kind cluster for deployment policy tests.
@@ -312,8 +310,16 @@ setup-kind-cluster: ## setup kind cluster with local docker creds and skyhook na
 	fi
 
 
-create-kind-cluster: ctlptl ## creates or updates a kind cluster.
-	$(CTLPTL) apply -f config/local-dev/ctlptl-config.yaml
+CTLPTL_CONFIG ?= config/local-dev/ctlptl-config.yaml
+CTLPTL_RENDERED_CONFIG ?= $(REPORTING)/ctlptl-config.yaml
+
+.PHONY: render-ctlptl-config
+render-ctlptl-config: reporting ## render the ctlptl config with the pinned kind node version
+	sed "s/__KIND_NODE_VERSION__/$(KIND_NODE_VERSION)/g" $(CTLPTL_CONFIG) > $(CTLPTL_RENDERED_CONFIG)
+
+.PHONY: create-kind-cluster
+create-kind-cluster: ctlptl render-ctlptl-config ## creates or updates a kind cluster.
+	$(CTLPTL) apply -f $(CTLPTL_RENDERED_CONFIG)
 	$(MAKE) setup-kind-cluster
 
 podman-create-machine: ## creates a podman machine
